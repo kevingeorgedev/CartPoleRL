@@ -4,8 +4,10 @@ import torch.optim as optim
 from replay import Transition
     
 class DuelDQNet(nn.Module):
-    def __init__(self, n_observations, n_actions) -> None:
+    def __init__(self, n_observations, n_actions, use_attention) -> None:
         super(DuelDQNet, self).__init__()
+
+        self.use_attention = use_attention
 
         self.n_actions = n_actions
         self.n_observations = n_observations
@@ -21,11 +23,19 @@ class DuelDQNet(nn.Module):
             nn.ReLU(),
         )
 
+        self.attn = nn.MultiheadAttention(embed_dim=128, num_heads=8, batch_first=True)
+
         self.fc_adv = nn.Linear(128, n_actions)
         self.fc_val = nn.Linear(128, 1)
 
     def forward(self, x):
         x = self.linear_seq(x)
+        
+        if self.use_attention:
+            x = x.unsqueeze(1)
+            attn_output, _ = self.attn(x, x, x)
+            x = attn_output.squeeze(1)
+
         adv: torch.Tensor = self.fc_adv(x)
         adv = adv.view(-1, self.n_actions)
         val: torch.Tensor = self.fc_val(x)
@@ -40,10 +50,10 @@ class DuelDQNet(nn.Module):
         return action[0].item()
 
 class Network:
-    def __init__(self, lr, n_observations, n_actions, gamma, device) -> None:
+    def __init__(self, lr, n_observations, n_actions, gamma, device, use_attention) -> None:
         self.device = device
-        self.policy = DuelDQNet(n_observations, n_actions).to(self.device)
-        self.target = DuelDQNet(n_observations, n_actions).to(self.device)
+        self.policy = DuelDQNet(n_observations, n_actions, use_attention).to(self.device)
+        self.target = DuelDQNet(n_observations, n_actions, use_attention).to(self.device)
         self.criterion = nn.MSELoss()
         self.gamma  = gamma
         self.optimizer = optim.Adam(self.policy.parameters(), lr=lr)

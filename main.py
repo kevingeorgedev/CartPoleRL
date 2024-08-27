@@ -6,6 +6,7 @@ from agent import Agent
 import torch
 import torch.nn as nn
 from itertools import count
+import matplotlib.pyplot as plt
 
 device = torch.device(
     "cuda" if torch.cuda.is_available() else
@@ -19,7 +20,7 @@ n_observations = env.observation_space.shape[0]
 print(f"Action space: {n_actions}")
 print(f"Observation space: {n_observations}")
 
-NUM_EPISODES = 100
+NUM_EPISODES = 500
 GAMMA = 0.99
 EXPLORE = 20000
 INITIAL_EPSILON = 0.1
@@ -28,17 +29,22 @@ REPLAY_MEMORY = 40000
 BATCH = 128
 LR = 2.5e-4
 TRAIN_AFTER = 128
+USE_ATTENTION = True
+MOVING_AVERAGE = 10
 
 UPDATE_STEPS = 100
 train_mode = True
 
 epsilon = INITIAL_EPSILON
 
-agent = Agent(memory_size=REPLAY_MEMORY, lr=LR, n_observations=n_observations, n_actions=n_actions, gamma=GAMMA, device=device)
+agent = Agent(memory_size=REPLAY_MEMORY, lr=LR, n_observations=n_observations, n_actions=n_actions, gamma=GAMMA, device=device, use_attention=USE_ATTENTION)
 learn_steps = 0
 loss_fn = nn.MSELoss()
+scores = []
+mean_scores = []
+total_score = 0
 
-for episode in count():
+for episode in range(NUM_EPISODES):
     state = env.reset()
     done = False
     reward_e = 0
@@ -66,11 +72,11 @@ for episode in count():
             batch = agent.replay.sample(BATCH)
             batch_state, batch_action, batch_next_state, batch_reward, batch_done = zip(*batch)
 
-            batch_state = torch.FloatTensor(batch_state).to(device)
-            batch_next_state = torch.FloatTensor(batch_next_state).to(device)
-            batch_action = torch.FloatTensor(batch_action).unsqueeze(1).to(device)
-            batch_reward = torch.FloatTensor(batch_reward).unsqueeze(1).to(device)
-            batch_done = torch.FloatTensor(batch_done).unsqueeze(1).to(device)
+            batch_state = torch.tensor(batch_state, dtype=torch.float32, device=device)
+            batch_next_state = torch.tensor(batch_next_state, dtype=torch.float32, device=device)
+            batch_action = torch.tensor(batch_action, dtype=torch.float32, device=device).unsqueeze(1)
+            batch_reward = torch.tensor(batch_reward, dtype=torch.float32, device=device).unsqueeze(1)
+            batch_done = torch.tensor(batch_done, dtype=torch.float32, device=device).unsqueeze(1)
 
             with torch.no_grad():
                 policyQ_next = agent.trainer.policy(batch_next_state)
@@ -90,4 +96,18 @@ for episode in count():
             break
         state = next_state
 
+    scores.append(reward_e)
+    total_score += reward_e
+    #mean_score = total_score / (episode + 1)
+    #mean_scores.append(mean_score)
+    sub_score = scores[MOVING_AVERAGE * -1:]
+    mean_scores.append(np.mean(sub_score))
+
     print(f"Episode: {episode + 1}, Score: {reward_e}")
+
+plt.plot(scores, label="Score")
+plt.plot(mean_scores, label="Score MA(50)")
+plt.xlabel("Episode #")
+plt.ylabel("Score")
+plt.legend(loc="upper left")
+plt.show()
