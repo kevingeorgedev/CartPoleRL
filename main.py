@@ -90,14 +90,4 @@ for episode in count():
             break
         state = next_state
 
-    """if episode % UPDATE_STEPS == 0:
-        # TODO: TRAIN AGENT
-        pass"""
-
     print(f"Episode: {episode + 1}, Score: {reward_e}")
-
-
-"""env.reset()
-env.render()
-time.sleep(5)
-env.close()"""
