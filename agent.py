@@ -11,3 +11,7 @@ class Agent():
 
     def get_action(self, state):
         return self.trainer.policy.get_action(input=state)
+    
+    def print_parameter_count(self):
+        print(f"Policy Net: {count_parameters(self.trainer.policy)}")
+        print(f"Target Net: {count_parameters(self.trainer.target)}")

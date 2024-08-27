@@ -19,18 +19,21 @@ class DuelDQNet(nn.Module):
             nn.Linear(128, 256, bias=False),
             nn.ReLU(),
 
-            nn.Linear(256, 128, bias=False),
+            nn.Linear(256, 512, bias=False),
+            nn.ReLU(),
+
+            nn.Linear(512, 256, bias=False),
             nn.ReLU(),
         )
 
-        self.attn = nn.MultiheadAttention(embed_dim=128, num_heads=8, batch_first=True)
+        self.attn = nn.MultiheadAttention(embed_dim=256, num_heads=16, batch_first=True)
 
-        self.fc_adv = nn.Linear(128, n_actions)
-        self.fc_val = nn.Linear(128, 1)
+        self.fc_adv = nn.Linear(256, n_actions)
+        self.fc_val = nn.Linear(256, 1)
 
     def forward(self, x):
         x = self.linear_seq(x)
-        
+
         if self.use_attention:
             x = x.unsqueeze(1)
             attn_output, _ = self.attn(x, x, x)
@@ -57,6 +60,7 @@ class Network:
         self.criterion = nn.MSELoss()
         self.gamma  = gamma
         self.optimizer = optim.Adam(self.policy.parameters(), lr=lr)
+        self.scheduler = optim.lr_scheduler.ExponentialLR(optimizer=self.optimizer, gamma=0.9)
 
     def train(self, batch: Transition):
         states      = torch.stack(batch.state)

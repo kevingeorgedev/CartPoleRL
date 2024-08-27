@@ -20,7 +20,7 @@ n_observations = env.observation_space.shape[0]
 print(f"Action space: {n_actions}")
 print(f"Observation space: {n_observations}")
 
-NUM_EPISODES = 500
+NUM_EPISODES = 400
 GAMMA = 0.99
 EXPLORE = 20000
 INITIAL_EPSILON = 0.1
@@ -30,7 +30,7 @@ BATCH = 128
 LR = 2.5e-4
 TRAIN_AFTER = 128
 USE_ATTENTION = True
-MOVING_AVERAGE = 10
+MOVING_AVERAGE = 100
 
 UPDATE_STEPS = 100
 train_mode = True
@@ -38,6 +38,7 @@ train_mode = True
 epsilon = INITIAL_EPSILON
 
 agent = Agent(memory_size=REPLAY_MEMORY, lr=LR, n_observations=n_observations, n_actions=n_actions, gamma=GAMMA, device=device, use_attention=USE_ATTENTION)
+agent.print_parameter_count()
 learn_steps = 0
 loss_fn = nn.MSELoss()
 scores = []
@@ -105,9 +106,11 @@ for episode in range(NUM_EPISODES):
 
     print(f"Episode: {episode + 1}, Score: {reward_e}")
 
+"""
 plt.plot(scores, label="Score")
-plt.plot(mean_scores, label="Score MA(50)")
+plt.plot(mean_scores, label=f"Score MA({MOVING_AVERAGE})")
 plt.xlabel("Episode #")
 plt.ylabel("Score")
 plt.legend(loc="upper left")
 plt.show()
+"""
